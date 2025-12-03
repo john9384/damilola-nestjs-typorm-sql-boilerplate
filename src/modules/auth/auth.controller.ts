@@ -7,12 +7,14 @@ import {
   AuthResponseDto,
 } from './auth.dto';
 import { AuthService } from './auth.service';
+import { Public } from '../../common/decorators/public.decorator';
 
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  @Public()
   @Post('signup')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Start onboarding process' })
@@ -40,6 +42,7 @@ export class AuthController {
     return await this.authService.onboard(onboardDto.email);
   }
 
+  @Public()
   @Post('complete')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Complete onboarding process' })
@@ -75,6 +78,7 @@ export class AuthController {
     return await this.authService.completeOnboard(completeOnboardDto);
   }
 
+  @Public()
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'User login' })
