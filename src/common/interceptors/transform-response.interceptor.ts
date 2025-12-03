@@ -22,7 +22,6 @@ export class TransformResponseInterceptor<T>
     context: ExecutionContext,
     next: CallHandler,
   ): Observable<Response<T>> {
-    const request = context.switchToHttp().getRequest();
     const statusCode = context.switchToHttp().getResponse().statusCode || 200;
 
     return next.handle().pipe(
@@ -45,13 +44,13 @@ export class TransformResponseInterceptor<T>
 
         // If data has a message property, extract it
         if (data && typeof data === 'object' && 'message' in data) {
-          message = data.message;
+          message = (data as { message: string }).message;
           // Remove message from content if it exists
-          const { message: msg, ...rest } = data;
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const { message: _message, ...rest } = data;
           content = Object.keys(rest).length > 0 ? rest : data;
         }
 
-        // If content is null or undefined, set to null
         if (content === undefined) {
           content = null;
         }
@@ -66,4 +65,3 @@ export class TransformResponseInterceptor<T>
     );
   }
 }
-

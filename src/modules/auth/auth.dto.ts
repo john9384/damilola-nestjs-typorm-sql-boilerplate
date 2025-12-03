@@ -1,40 +1,21 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsEmail, MinLength, Length, Matches } from 'class-validator';
+import { IsString, IsEmail, MinLength } from 'class-validator';
 
-export class OnboardRequestDto {
+export class SignupDto {
   @ApiProperty({
-    description: 'Email address for onboarding',
+    description: 'User full name',
+    example: 'John Doe',
+  })
+  @IsString()
+  @MinLength(2)
+  name: string;
+
+  @ApiProperty({
+    description: 'User email address',
     example: 'user@example.com',
   })
   @IsEmail()
   email: string;
-}
-
-export class CompleteOnboardRequestDto {
-  @ApiProperty({
-    description: '6-digit onboarding token',
-    example: '123456',
-  })
-  @IsString()
-  @Length(6, 6)
-  @Matches(/^\d{6}$/, { message: 'Token must be exactly 6 digits' })
-  token: string;
-
-  @ApiProperty({
-    description: 'User first name',
-    example: 'John',
-  })
-  @IsString()
-  @MinLength(2)
-  firstName: string;
-
-  @ApiProperty({
-    description: 'User last name',
-    example: 'Doe',
-  })
-  @IsString()
-  @MinLength(2)
-  lastName: string;
 
   @ApiProperty({
     description: 'User password',
@@ -72,10 +53,46 @@ export class AuthResponseDto {
   @ApiProperty({
     description: 'User information',
   })
-  user: {
+  userData: {
     id: string;
     email: string;
-    firstName: string;
-    lastName: string;
+    name: string;
   };
+}
+
+export class UserDataDto {
+  @ApiProperty({
+    description: 'User ID',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
+  id: string;
+
+  @ApiProperty({
+    description: 'User email',
+    example: 'user@example.com',
+  })
+  email: string;
+
+  @ApiProperty({
+    description: 'User full name',
+    example: 'John Doe',
+  })
+  name: string;
+
+  @ApiProperty({
+    description: 'User creation date',
+    example: '2024-01-01T00:00:00.000Z',
+  })
+  createdAt: Date;
+
+  @ApiProperty({
+    description: 'User last update date',
+    example: '2024-01-01T00:00:00.000Z',
+  })
+  updatedAt: Date;
+}
+
+export interface JwtPayload {
+  sub: string;
+  email: string;
 }

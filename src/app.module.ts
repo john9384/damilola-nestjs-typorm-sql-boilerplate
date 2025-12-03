@@ -7,6 +7,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { UserModule } from './modules/user/user.module';
 import { EventsModule } from './modules/events/events.module';
 import { JobsModule } from './modules/jobs/jobs.module';
+import { GuardsModule } from './common/guards/guards.module';
 import { validationSchema } from './config/validation.schema';
 import appConfig from './config/app.config';
 import databaseConfig from './config/orm.config';
@@ -19,8 +20,9 @@ import databaseConfig from './config/orm.config';
       load: [appConfig, databaseConfig],
     }),
     DatabaseModule,
+    AuthModule, // Import AuthModule first to register JwtStrategy
+    GuardsModule, // Then import GuardsModule to provide JwtAuthGuard
     UserModule,
-    AuthModule,
     EventsModule,
     JobsModule,
   ],

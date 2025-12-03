@@ -1,13 +1,30 @@
-import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 import {
-  OnboardRequestDto,
-  CompleteOnboardRequestDto,
+  Controller,
+  Post,
+  Get,
+  Body,
+  HttpCode,
+  HttpStatus,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBody,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
+import {
+  SignupDto,
   LoginRequestDto,
   AuthResponseDto,
+  UserDataDto,
 } from './auth.dto';
 import { AuthService } from './auth.service';
 import { Public } from '../../common/decorators/public.decorator';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { UserEntity } from '../../database/entities';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -16,18 +33,18 @@ export class AuthController {
 
   @Public()
   @Post('signup')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Start onboarding process' })
-  @ApiBody({ type: OnboardRequestDto })
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'User signup' })
+  @ApiBody({ type: SignupDto })
   @ApiResponse({
-    status: 200,
-    description: 'Onboarding token sent successfully',
+    status: 201,
+    description: 'User created successfully',
     schema: {
       type: 'object',
       properties: {
         message: {
           type: 'string',
-          example: 'Onboarding token sent to your email',
+          example: 'User created successfully',
         },
       },
     },
@@ -36,46 +53,8 @@ export class AuthController {
     status: 409,
     description: 'User with this email already exists',
   })
-  async onboard(
-    @Body() onboardDto: OnboardRequestDto,
-  ): Promise<{ message: string }> {
-    return await this.authService.onboard(onboardDto.email);
-  }
-
-  @Public()
-  @Post('complete')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Complete onboarding process' })
-  @ApiBody({ type: CompleteOnboardRequestDto })
-  @ApiResponse({
-    status: 200,
-    description: 'Account created successfully',
-    schema: {
-      type: 'object',
-      properties: {
-        message: {
-          type: 'string',
-          example: 'Account created successfully',
-        },
-      },
-    },
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'Invalid or expired token',
-  })
-  @ApiResponse({
-    status: 404,
-    description: 'Invalid onboarding token',
-  })
-  @ApiResponse({
-    status: 409,
-    description: 'User with this email already exists',
-  })
-  async completeOnboard(
-    @Body() completeOnboardDto: CompleteOnboardRequestDto,
-  ): Promise<{ message: string }> {
-    return await this.authService.completeOnboard(completeOnboardDto);
+  async signup(@Body() signupDto: SignupDto): Promise<{ message: string }> {
+    return await this.authService.signup(signupDto);
   }
 
   @Public()
@@ -92,11 +71,24 @@ export class AuthController {
     status: 401,
     description: 'Invalid credentials',
   })
-  @ApiResponse({
-    status: 429,
-    description: 'Too many login attempts',
-  })
   async login(@Body() loginDto: LoginRequestDto): Promise<AuthResponseDto> {
     return await this.authService.login(loginDto);
+  }
+
+  @Get('me')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get current user' })
+  @ApiResponse({
+    status: 200,
+    description: 'Current user information',
+    type: UserDataDto,
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+  })
+  async getCurrentUser(@CurrentUser() user: UserEntity): Promise<UserDataDto> {
+    return await this.authService.getCurrentUser(user);
   }
 }

@@ -3,72 +3,99 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
+import * as bcrypt from 'bcrypt';
 
 import { UserEntity } from '../../database/entities';
 import {
   AuthResponseDto,
-  CompleteOnboardRequestDto,
-  JwtPayload,
   LoginRequestDto,
-} from '../../types';
-import { UserRepository } from '../user/user.repository';
+  SignupDto,
+  UserDataDto,
+  JwtPayload,
+} from './auth.dto';
+import { UserService } from '../user/user.service';
 
 @Injectable()
 export class AuthService {
-  constructor(private readonly userRepository: UserRepository) {}
+  constructor(
+    private readonly userService: UserService,
+    private readonly jwtService: JwtService,
+    private readonly configService: ConfigService,
+  ) {}
 
-  async onboard(email: string): Promise<{ message: string }> {
-    const existingUser = await this.userRepository.findByEmail(email);
+  async signup(signupDto: SignupDto): Promise<{ message: string }> {
+    const { name, email, password } = signupDto;
+
+    // Check if user already exists
+    const existingUser = await this.userService.findOneByEmail(email);
     if (existingUser) {
       throw new ConflictException('User with this email already exists');
     }
 
-    return { message: 'Onboarding token sent to your email' };
-  }
+    // Hash the password
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-  async completeOnboard(
-    completeOnboardDto: CompleteOnboardRequestDto,
-  ): Promise<{ message: string }> {
-    const { token, firstName, lastName, password } = completeOnboardDto;
-    console.log(token, firstName, lastName, password);
-    await this.userRepository.createUser({
-      email: '',
-      password,
-      name: `${firstName} ${lastName}`,
+    // Create user with hashed password
+    await this.userService.create({
+      name,
+      email,
+      password: hashedPassword,
     });
-    return { message: 'Account created successfully' };
+
+    return { message: 'User created successfully' };
   }
 
   async login(loginDto: LoginRequestDto): Promise<AuthResponseDto> {
     const { email, password } = loginDto;
-    console.log(email, password);
-    const user = await this.userRepository.findByEmail(email);
+
+    // Find user by email
+    const user = await this.userService.findOneByEmail(email);
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }
 
+    // Validate password
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    // Generate JWT token
+    const payload: JwtPayload = {
+      sub: user.id,
+      email: user.email,
+    };
+
+    const accessToken = this.jwtService.sign(payload);
+
     return {
-      accessToken: '1234567890',
-      user: {
+      accessToken,
+      userData: {
         id: user.id,
         email: user.email,
-        firstName: user.name.split(' ')[0] || '',
-        lastName: user.name.split(' ').slice(1).join(' ') || '',
+        name: user.name,
       },
     };
   }
 
+  async getCurrentUser(user: UserEntity): Promise<UserDataDto> {
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    };
+  }
+
   async validateUser(payload: JwtPayload): Promise<UserEntity> {
-    const user = await this.userRepository.findById(payload.sub);
+    const user = await this.userService.findOneEntity(payload.sub);
     if (!user) {
       throw new UnauthorizedException('User not found');
     }
-    return user;
-  }
-
-  async validateUserCredentials(email: string): Promise<UserEntity | null> {
-    const user = await this.userRepository.findByEmail(email);
-
     return user;
   }
 }
